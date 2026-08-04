@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوس سانتوس - تسجيل الدخول</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Tahoma', sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 50%, #0f3460 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 30px;
+            padding: 50px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+        }
+        .login-card h1 { color: #fff; font-size: 2.5rem; font-weight: bold; text-align: center; }
+        .login-card h1 span { color: #5865F2; }
+        .login-card .subtitle { color: #aaa; text-align: center; margin-bottom: 30px; }
+        .form-control {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            border-radius: 15px;
+            padding: 15px;
+            direction: ltr;
+        }
+        .form-control::placeholder { color: #888; }
+        .form-control:focus {
+            background: rgba(255,255,255,0.15);
+            border-color: #5865F2;
+            box-shadow: 0 0 20px rgba(88,101,242,0.3);
+            color: #fff;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #5865F2, #4752C4);
+            border: none;
+            border-radius: 15px;
+            padding: 15px;
+            font-weight: bold;
+            width: 100%;
+            transition: all 0.3s;
+        }
+        .btn-primary:hover { transform: scale(1.02); box-shadow: 0 10px 30px rgba(88,101,242,0.4); }
+        .btn-success {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            border: none;
+            border-radius: 15px;
+            padding: 15px;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 10px;
+            display: none;
+        }
+        .alert { border-radius: 15px; display: none; }
+        .logo { text-align: center; font-size: 4rem; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="logo">🎮</div>
+        <h1>لوس <span>سانتوس</span></h1>
+        <p class="subtitle">لوحة تحكم البوت الاحترافية</p>
+        <div id="alert" class="alert alert-danger"></div>
+        <form id="loginForm">
+            <div class="mb-3">
+                <input type="password" class="form-control" id="tokenInput" placeholder="🔑 توكن البوت" required>
+            </div>
+            <div class="mb-3">
+                <input type="text" class="form-control" id="guildInput" placeholder="🆔 معرف السيرفر" required>
+            </div>
+            <button type="submit" class="btn-primary">🚀 تسجيل الدخول</button>
+        </form>
+        <button class="btn-success" id="dashboardBtn" onclick="goToDashboard()">📊 دخول إلى لوحة التحكم</button>
+        <div class="text-center mt-3"><small style="color: #555;">© 2026 لوس سانتوس</small></div>
+    </div>
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const token = document.getElementById('tokenInput').value;
+            const guildId = document.getElementById('guildInput').value;
+            const alertDiv = document.getElementById('alert');
+            alertDiv.style.display = 'none';
+            if (!token || !guildId) {
+                alertDiv.className = 'alert alert-danger';
+                alertDiv.textContent = '⚠️ الرجاء إدخال جميع البيانات';
+                alertDiv.style.display = 'block';
+                return;
+            }
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, guildId })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('dashboardBtn').style.display = 'block';
+                    alertDiv.className = 'alert alert-success';
+                    alertDiv.textContent = '✅ تم تسجيل الدخول بنجاح!';
+                    alertDiv.style.display = 'block';
+                    localStorage.setItem('token', token);
+                    localStorage.setItem('guildId', guildId);
+                } else {
+                    alertDiv.className = 'alert alert-danger';
+                    alertDiv.textContent = '❌ ' + (data.error || 'حدث خطأ');
+                    alertDiv.style.display = 'block';
+                }
+            } catch (error) {
+                alertDiv.className = 'alert alert-danger';
+                alertDiv.textContent = '❌ خطأ في الاتصال';
+                alertDiv.style.display = 'block';
+            }
+        });
+        function goToDashboard() { window.location.href = '/dashboard'; }
+        window.onload = function() {
+            if (localStorage.getItem('token')) {
+                document.getElementById('dashboardBtn').style.display = 'block';
+            }
+        };
+    </script>
+</body>
+  </html>
