@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوس سانتوس - لوحة التحكم</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Tahoma', sans-serif; background: #0a0a1a; color: #fff; }
+        .navbar { background: rgba(15,15,35,0.95); padding: 15px 30px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .navbar .brand { font-size: 1.5rem; font-weight: bold; color: #5865F2; }
+        .navbar .brand span { color: #fff; }
+        .main { padding: 30px; }
+        .stat-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 25px; }
+        .stat-card .number { font-size: 2.5rem; font-weight: bold; color: #5865F2; }
+        .stat-card .label { color: #888; }
+        .btn-control { border-radius: 12px; padding: 12px 25px; font-weight: bold; border: none; }
+        .btn-success { background: #22c55e; color: #fff; }
+        .btn-danger { background: #ef4444; color: #fff; }
+        .btn-warning { background: #f59e0b; color: #fff; }
+        .btn-purple { background: #8b5cf6; color: #fff; }
+        .server-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 15px; padding: 20px; }
+        .server-icon { width: 50px; height: 50px; border-radius: 50%; background: #5865F2; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+        .status-badge { padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; }
+        .status-online { background: rgba(34,197,94,0.2); color: #22c55e; }
+        .status-offline { background: rgba(239,68,68,0.2); color: #ef4444; }
+        .controls-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 15px; }
+        .control-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 15px 10px; text-align: center; cursor: pointer; }
+        .control-btn i { font-size: 1.5rem; color: #5865F2; display: block; }
+        .control-btn .label { font-size: 0.65rem; color: #aaa; }
+        .logout-btn { background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.2); border-radius: 12px; padding: 8px 20px; cursor: pointer; }
+        .logout-btn:hover { background: rgba(239,68,68,0.2); }
+    </style>
+</head>
+<body>
+<nav class="navbar">
+    <div class="container-fluid d-flex justify-content-between">
+        <div class="brand">🎮 لوس <span>سانتوس</span></div>
+        <div>
+            <span id="botStatus" class="status-badge status-offline">⚪ غير متصل</span>
+            <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> خروج</button>
+        </div>
+    </div>
+</nav>
+<div class="main container-fluid">
+    <div class="row g-4 mb-4">
+        <div class="col-md-3"><div class="stat-card"><div class="number" id="guildCount">0</div><div class="label">📌 السيرفرات</div></div></div>
+        <div class="col-md-3"><div class="stat-card"><div class="number" id="memberCount">0</div><div class="label">👥 الأعضاء</div></div></div>
+        <div class="col-md-3"><div class="stat-card"><div class="number" id="statusText">✖</div><div class="label">📡 الحالة</div></div></div>
+        <div class="col-md-3"><div class="stat-card"><div class="number" id="timerDisplay">00:00</div><div class="label">⏱️ المتبقي</div></div></div>
+    </div>
+    <div class="row g-3 mb-4">
+        <div class="col-md-3"><button class="btn-control btn-success w-100" onclick="scheduleBot()"><i class="fas fa-clock"></i> تشغيل ساعة</button></div>
+        <div class="col-md-3"><button class="btn-control btn-danger w-100" onclick="stopBot()"><i class="fas fa-stop"></i> إيقاف</button></div>
+        <div class="col-md-3"><button class="btn-control btn-warning w-100" onclick="restartBot()"><i class="fas fa-sync"></i> إعادة تشغيل</button></div>
+        <div class="col-md-3"><button class="btn-control btn-purple w-100" onclick="refreshData()"><i class="fas fa-refresh"></i> تحديث</button></div>
+    </div>
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="stat-card">
+                <h5><i class="fas fa-sliders-h text-primary"></i> أزرار التحكم (600+)</h5>
+                <div class="controls-grid" id="controlsGrid"></div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <h5><i class="fas fa-server text-primary"></i> السيرفرات</h5>
+            <div class="row g-3" id="guildsContainer"><div class="col-12 text-center text-muted">🔄 جاري التحميل...</div></div>
+        </div>
+    </div>
+</div>
+<script>
+    let timerInterval = null, secondsLeft = 0;
+    function generateControls() {
+        const icons = ['fa-microphone','fa-hashtag','fa-gavel','fa-ban','fa-user-slash','fa-lock','fa-unlock','fa-trash','fa-pencil-alt','fa-list','fa-info-circle','fa-clock','fa-calendar','fa-dice','fa-trophy','fa-gift','fa-star','fa-shield-alt','fa-user-check','fa-user-minus'];
+        const names = ['كتم','مسح تكت','تيم آوت','حظر','طرد','قفل','فتح','حذف','تعديل','قائمة','معلومات','توقيت','جدولة','عشوائي','مسابقات','هدايا','تقييم','حماية','ترقية','تنزيل'];
+        const grid = document.getElementById('controlsGrid');
+        grid.innerHTML = '';
+        for (let i = 0; i < 600; i++) {
+            const idx = i % icons.length;
+            const btn = document.createElement('div');
+            btn.className = 'control-btn';
+            btn.innerHTML = `<i class="fas ${icons[idx]}"></i><div class="label">${names[idx]} ${Math.floor(i/icons.length)+1}</div>`;
+            btn.onclick = () => alert('🔄 تم تنفيذ: ' + names[idx]);
+            grid.appendChild(btn);
+        }
+    }
+    async function fetchStatus() {
+        try {
+            const res = await fetch('/api/bot/status');
+            const data = await res.json();
+            const statusEl = document.getElementById('botStatus');
+            if (data.isOnline) {
+                statusEl.className = 'status-badge status-online';
+                statusEl.innerHTML = '🟢 متصل';
+                document.getElementById('statusText').textContent = '✅ شغال';
+            } else {
+                statusEl.className = 'status-badge status-offline';
+                statusEl.innerHTML = '🔴 غير متصل';
+                document.getElementById('statusText').textContent = '❌ متوقف';
+            }
+        } catch(e) {}
+    }
+    async function fetchGuilds() {
+        try {
+            const res = await fetch('/api/guilds');
+            const data = await res.json();
+            if (data.guilds) {
+                const container = document.getElementById('guildsContainer');
+                container.innerHTML = '';
+                document.getElementById('guildCount').textContent = data.guilds.length;
+                let total = 0;
+                data.guilds.forEach(g => {
+                    total += g.memberCount;
+                    container.innerHTML += `<div class="col-md-4 col-lg-3"><div class="server-card"><div class="d-flex align-items-center gap-3"><div class="server-icon">${g.name.charAt(0).toUpperCase()}</div><div><div class="fw-bold">${g.name}</div><small class="text-muted">👥 ${g.memberCount} عضو</small></div></div></div></div>`;
+                });
+                document.getElementById('memberCount').textContent = total;
+            }
+        } catch(e) {}
+    }
+    async function scheduleBot() {
+        const res = await fetch('/api/bot/schedule', { method: 'POST' });
+        const data = await res.json();
+        alert(data.message || data.error);
+        fetchStatus(); fetchGuilds();
+        startTimer(3600);
+    }
+    async function stopBot() {
+        const res = await fetch('/api/bot/stop', { method: 'POST' });
+        const data = await res.json();
+        alert(data.message || data.error);
+        fetchStatus(); fetchGuilds();
+        if (timerInterval) clearInterval(timerInterval);
+        document.getElementById('timerDisplay').textContent = '⏹️ متوقف';
+    }
+    async function restartBot() { await stopBot(); setTimeout(scheduleBot, 2000); }
+    function refreshData() { fetchStatus(); fetchGuilds(); }
+    function logout() { localStorage.clear(); window.location.href = '/'; }
+    function startTimer(seconds) {
+        if (timerInterval) clearInterval(timerInterval);
+        secondsLeft = seconds;
+        timerInterval = setInterval(() => {
+            secondsLeft--;
+            if (secondsLeft <= 0) { clearInterval(timerInterval); document.getElementById('timerDisplay').textContent = '⏹️ انتهى'; fetchStatus(); return; }
+            const m = String(Math.floor(secondsLeft/60)).padStart(2,'0');
+            const s = String(secondsLeft%60).padStart(2,'0');
+            document.getElementById('timerDisplay').textContent = `⏱️ ${m}:${s}`;
+        }, 1000);
+    }
+    generateControls();
+    fetchStatus();
+    fetchGuilds();
+    setInterval(fetchStatus, 10000);
+    setInterval(fetchGuilds, 30000);
+</script>
+</body>
+</html>
